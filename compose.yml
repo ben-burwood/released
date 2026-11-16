@@ -1,0 +1,10 @@
+services:
+  releases-dashboard:
+    container_name: releases-dashboard
+    build: .
+    restart: unless-stopped
+    environment:
+      - GITHUB_TOKEN
+      - GITHUB_REPO
+    ports:
+      - 8080:8080

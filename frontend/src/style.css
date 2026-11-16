@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme {
+  --font-mono: ui-monospace, "SF Mono", "Roboto Mono", Menlo, monospace;
+
+  --color-navy-950: #001D3B;
+  --color-navy-900: #002850;
+  --color-navy-700: #1A436D;
+  --color-mist-50: #F2F5F8;
+  --color-mist-200: #D9E0E8;
+  --color-mist-300: #C6D0DC;
+  --color-mist-400: #B3C0CF;
+  --color-brand-50: #FEF5EA;
+  --color-brand-200: #FCD09E;
+  --color-brand-500: #F99029;
+  --color-brand-700: #A85A13;
+  --color-brand-900: #5A3608;
+}
+
+body {
+  @apply bg-mist-200 text-navy-950;
+}
+
+/* Rendered release notes (server-side markdown) */
+.release-body {
+  @apply text-sm leading-relaxed text-gray-700 wrap-break-word;
+
+  & img { @apply max-w-3/4 h-auto rounded-md; }
+  & h1, & h2, & h3, & h4 { @apply mt-3 mb-1.5 font-semibold leading-snug text-navy-900; }
+  & h1 { @apply text-xl; }
+  & h2 { @apply text-lg; }
+  & h3 { @apply text-base; }
+  & h4 { @apply text-sm; }
+  & p { @apply my-1.5; }
+  & ul, & ol { @apply my-1.5 pl-5; }
+  & ul { @apply list-disc; }
+  & ol { @apply list-decimal; }
+  & li { @apply my-0.5; }
+  & a { @apply text-navy-700 underline wrap-anywhere; }
+  & code { @apply font-mono text-[0.85em] bg-mist-50 px-1.5 py-px rounded; }
+  & pre { @apply my-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 overflow-x-auto; }
+  & pre code { @apply bg-transparent p-0; }
+  & blockquote { @apply my-1.5 px-3 py-0.5 border-l-3 border-mist-400 text-gray-600; }
+  & table { @apply my-2 border-collapse text-[0.85rem] block overflow-x-auto; }
+  & th, & td { @apply border border-gray-200 px-2.5 py-1; }
+  & th { @apply bg-gray-50 font-semibold; }
+  & hr { @apply my-3 border-gray-200; }
+}
