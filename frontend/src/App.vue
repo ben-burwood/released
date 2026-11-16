@@ -1,7 +1,23 @@
 <template>
     <div class="min-h-screen w-full">
         <main class="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-            <h1 class="mb-8 text-3xl font-bold tracking-tight text-navy-950">Releases : {{ repoName }}</h1>
+            <h1 class="mb-8 text-3xl font-bold tracking-tight text-navy-950">
+                Releases :
+                <span v-if="repos.length > 1" class="relative inline-block max-w-full align-baseline">
+                    <select
+                        v-model="repo"
+                        aria-label="Repository"
+                        class="max-w-full cursor-pointer appearance-none truncate rounded-lg border border-transparent bg-transparent py-0.5 pr-9 pl-1 font-[inherit] hover:border-mist-400 focus:border-brand-500 focus:outline-none"
+                        @change="selectRepo"
+                    >
+                        <option v-for="r in repos" :key="r" :value="r" class="text-base font-normal">{{ repoLabel(r) }}</option>
+                    </select>
+                    <svg class="pointer-events-none absolute top-1/2 right-2 size-5 -translate-y-1/2 text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                    </svg>
+                </span>
+                <template v-else>{{ repoName }}</template>
+            </h1>
 
             <div v-if="loading" class="flex items-center gap-3 text-sm text-gray-600">
                 <span class="size-4 animate-spin rounded-full border-2 border-mist-400 border-t-brand-500"></span>
@@ -37,6 +53,9 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 
 const PAGE_SIZE = 25;
 
+const REPO_PARAM = "repo";
+
+const repos = ref<string[]>([]);
 const repo = ref("");
 const releases = ref<Release[]>([]);
 const loading = ref(true);
@@ -44,6 +63,12 @@ const error = ref("");
 const shown = ref(PAGE_SIZE);
 
 const repoName = computed(() => repo.value.split("/").pop() ?? "");
+// Labels a repo by its name, or by owner/name when another configured repo shares the name
+function repoLabel(r: string) {
+    const name = r.split("/").pop() ?? r;
+    return repos.value.filter((o) => o.split("/").pop()?.toLowerCase() === name.toLowerCase()).length > 1 ? r : name;
+}
+
 const shownCount = computed(() => Math.min(shown.value, releases.value.length));
 
 // Latest is the newest full release, falling back to the first listed
@@ -53,19 +78,57 @@ const latest = computed(() => releases.value.find((r) => !r.prerelease && !r.dra
 const now = ref(new Date());
 const ticker = setInterval(() => (now.value = new Date()), 30_000);
 
-onMounted(async () => {
+async function getJSON<T>(url: string): Promise<T> {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error((await resp.text()).trim() || resp.statusText);
+    return resp.json();
+}
+
+// Counts loads, so a slow response for a previously selected repo is dropped
+let loadID = 0;
+
+// Loads the releases of ?repo= (owner/name), or of the server's default repo when unset
+async function loadReleases() {
+    const id = ++loadID;
+    const requested = new URLSearchParams(location.search).get(REPO_PARAM) ?? "";
+    loading.value = true;
+    error.value = "";
+    releases.value = [];
+    shown.value = PAGE_SIZE;
+    // Show the requested repo while loading, matched case-insensitively against the configured repos
+    repo.value = repos.value.find((r) => r.toLowerCase() === requested.toLowerCase()) ?? requested;
     try {
-        const resp = await fetch(`${SERVER_URL}/releases`);
-        if (!resp.ok) throw new Error((await resp.text()).trim() || resp.statusText);
-        const data: Releases = await resp.json();
+        const query = requested ? `?${REPO_PARAM}=${encodeURIComponent(requested)}` : "";
+        const data = await getJSON<Releases>(`${SERVER_URL}/releases${query}`);
+        if (id !== loadID) return;
         repo.value = data.repo;
         releases.value = data.releases;
     } catch (e) {
+        if (id !== loadID) return;
         error.value = e instanceof Error ? e.message : String(e);
-    } finally {
-        loading.value = false;
     }
+    loading.value = false;
+}
+
+function selectRepo() {
+    const url = new URL(location.href);
+    url.searchParams.set(REPO_PARAM, repo.value);
+    history.pushState(null, "", url);
+    loadReleases();
+}
+
+onMounted(async () => {
+    window.addEventListener("popstate", loadReleases);
+    try {
+        repos.value = await getJSON<string[]>(`${SERVER_URL}/repos`);
+    } catch {
+        // The selector is optional; releases still load for ?repo= or the default
+    }
+    await loadReleases();
 });
 
-onUnmounted(() => clearInterval(ticker));
+onUnmounted(() => {
+    clearInterval(ticker);
+    window.removeEventListener("popstate", loadReleases);
+});
 </script>

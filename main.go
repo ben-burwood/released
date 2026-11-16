@@ -3,19 +3,17 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
+	"strings"
 	"time"
 
 	"releases/internal/api"
 	"releases/internal/assets"
 	"releases/internal/github"
 	"releases/internal/releases"
+	"releases/internal/repos"
 )
 
 const (
-	// RepoEnvVar is the repo (owner/name) to list releases from
-	RepoEnvVar = "GITHUB_REPO"
-
 	cacheTTL = 60 * time.Second
 
 	// assetTTL caches signed attachment URLs, leaving a minute of GitHub's 5 minute signature for the browser to use them
@@ -27,13 +25,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	repo := os.Getenv(RepoEnvVar)
-	if repo == "" {
-		log.Fatal(RepoEnvVar + " required")
+	repoList, err := repos.LoadFromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
+	services := make(map[string]*releases.Service, len(repoList))
+	for _, repo := range repoList {
+		services[strings.ToLower(repo)] = releases.NewService(gh, repo, cacheTTL)
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/releases", api.ReleasesHandler(releases.NewService(gh, repo, cacheTTL)))
+	mux.HandleFunc("GET /api/repos", api.ReposHandler(repoList))
+	mux.HandleFunc("GET /api/releases", api.ReleasesHandler(repoList, services))
 	mux.HandleFunc("GET "+assets.PathPrefix+"{id}", api.AssetHandler(assets.NewService(gh, assetTTL)))
 
 	// Serve Static Frontend

@@ -3,14 +3,34 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"releases/internal/assets"
 	"releases/internal/releases"
 )
 
-// ReleasesHandler handles requests for the repo's releases, drafts first then newest first
-func ReleasesHandler(svc *releases.Service) http.HandlerFunc {
+// ReposHandler handles requests for the configured repos (owner/name), the first being the default
+func ReposHandler(repos []string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(repos)
+	}
+}
+
+// ReleasesHandler handles requests for the releases of ?repo= (owner/name, defaulting to the first configured repo),
+// drafts first then newest first. Only configured repos are served, so the token can't be used to read any other.
+func ReleasesHandler(repos []string, services map[string]*releases.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		repo := r.URL.Query().Get("repo")
+		if repo == "" {
+			repo = repos[0]
+		}
+		svc, ok := services[strings.ToLower(repo)]
+		if !ok {
+			http.Error(w, "unknown repo "+repo, http.StatusNotFound)
+			return
+		}
+
 		data, err := svc.Releases(r.Context())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)

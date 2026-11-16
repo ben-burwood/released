@@ -1,10 +1,13 @@
 services:
-  releases-dashboard:
-    container_name: releases-dashboard
+  released:
+    container_name: released
     build: .
     restart: unless-stopped
     environment:
       - GITHUB_TOKEN
-      - GITHUB_REPO
+      - GITHUB_REPOS
+      # - GITHUB_REPOS_FILE=/config/config.yml
+    # volumes:
+    #   - ./config:/config:ro
     ports:
       - 8080:8080
