@@ -12,9 +12,7 @@
 
             <template v-else>
                 <!-- TIMELINE -->
-                <ol
-                    class="relative mt-2 mb-10 before:absolute before:top-2.5 before:bottom-2.5 before:left-[9.05rem] before:hidden before:w-0.5 before:bg-linear-to-b before:from-navy-900 before:to-mist-400 sm:before:block"
-                >
+                <ol class="mt-2 mb-10">
                     <ReleaseItem v-for="r in releases.slice(0, shownCount)" :key="r.url" :release="r" :latest="r === latest" :now="now" />
                 </ol>
 

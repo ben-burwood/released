@@ -1,7 +1,9 @@
 <template>
+    <!-- Date column (8rem) + gap (2rem); the timeline runs down the middle of the gap -->
     <li class="relative grid grid-cols-[minmax(0,1fr)] gap-1 pb-6 sm:grid-cols-[8rem_1fr] sm:gap-8">
-        <!-- TIMELINE DOT -->
-        <span class="absolute top-4 left-[8.55rem] hidden size-4 rounded-full border-3 border-mist-200 ring-2 sm:block" :class="dotClass"></span>
+        <!-- TIMELINE -->
+        <span class="absolute top-0 bottom-0 left-36 hidden w-0.5 -translate-x-1/2 bg-mist-400 sm:block"></span>
+        <span class="absolute top-4 left-36 hidden size-4 -translate-x-1/2 rounded-full border-3 border-mist-200 ring-2 sm:block" :class="dotClass"></span>
 
         <!-- DATE -->
         <div class="leading-snug sm:pt-3 sm:text-right">

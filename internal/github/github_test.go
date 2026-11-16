@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,7 +11,7 @@ import (
 )
 
 func newTestClient(srv *httptest.Server) *Client {
-	return &Client{token: "test-token", baseURL: srv.URL, http: srv.Client()}
+	return &Client{token: "test-token", baseURL: srv.URL, assetsURL: srv.URL + "/assets/", http: srv.Client()}
 }
 
 func TestListReleasesFollowsPagination(t *testing.T) {
@@ -63,40 +64,27 @@ func TestNextLink(t *testing.T) {
 	}
 }
 
-func TestAssetResolverRewrite(t *testing.T) {
-	calls := 0
+func TestResolveAsset(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		calls++
-		if strings.HasSuffix(r.URL.Path, "/abc-123") {
+		if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
+			t.Errorf("Authorization = %q", got)
+		}
+		if r.URL.Path == "/assets/abc-123" {
 			http.Redirect(w, r, "https://signed.example/abc", http.StatusFound)
 			return
 		}
 		http.NotFound(w, r)
 	}))
 	defer srv.Close()
-
 	c := newTestClient(srv)
-	a := c.NewAssetResolver(context.Background())
-	// Point the resolver at the test server, keeping the no-redirect policy
-	a.http.Transport = &rewriteTransport{target: srv.URL}
 
-	body := "![x](https://github.com/user-attachments/assets/abc-123) and https://github.com/user-attachments/assets/abc-123 and https://github.com/user-attachments/assets/def"
-	got := a.Rewrite(body)
-	want := "![x](https://signed.example/abc) and https://signed.example/abc and https://github.com/user-attachments/assets/def"
-	if got != want {
-		t.Errorf("Rewrite = %q, want %q", got, want)
+	if got, err := c.ResolveAsset(context.Background(), "abc-123"); err != nil || got != "https://signed.example/abc" {
+		t.Errorf("ResolveAsset = %q, %v", got, err)
 	}
-	if calls != 2 {
-		t.Errorf("calls = %d, want 2 (repeated URLs are cached)", calls)
+	if _, err := c.ResolveAsset(context.Background(), "def"); err == nil || !strings.Contains(err.Error(), "404") {
+		t.Errorf("ResolveAsset(missing) err = %v", err)
 	}
-}
-
-// rewriteTransport sends every request to target, keeping the path
-type rewriteTransport struct{ target string }
-
-func (t *rewriteTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	req := r.Clone(r.Context())
-	u, _ := req.URL.Parse(t.target + r.URL.Path)
-	req.URL, req.Host = u, u.Host
-	return http.DefaultTransport.RoundTrip(req)
+	if _, err := c.ResolveAsset(context.Background(), "../etc"); !errors.Is(err, ErrInvalidAssetID) {
+		t.Errorf("ResolveAsset(invalid) err = %v", err)
+	}
 }

@@ -12,11 +12,13 @@ Go backend serving a Vue (Vite + Tailwind) frontend, deployed as a single Docker
 Both are required; the server exits on startup if either is missing.
 
 Releases are cached for 60 seconds. Release notes are rendered from Markdown server-side, with GitHub's `Full Changelog` trailer removed and
-private `github.com/user-attachments` image links resolved to signed URLs so they load without a GitHub session.
+private `github.com/user-attachments` image links pointed at `/api/assets/{id}`, which redirects to a freshly signed URL so they load without a
+GitHub session (signed URLs expire after 5 minutes, so they are resolved on request and cached for 4).
 
 ## API
 
 - `GET /api/releases` — JSON of every release of the repo, drafts first then newest first
+- `GET /api/assets/{id}` — redirect to the signed URL of a private release-note attachment
 
 ## Development
 

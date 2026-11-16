@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"releases/internal/api"
+	"releases/internal/assets"
 	"releases/internal/github"
 	"releases/internal/releases"
 )
@@ -16,6 +17,9 @@ const (
 	RepoEnvVar = "GITHUB_REPO"
 
 	cacheTTL = 60 * time.Second
+
+	// assetTTL caches signed attachment URLs, leaving a minute of GitHub's 5 minute signature for the browser to use them
+	assetTTL = 4 * time.Minute
 )
 
 func main() {
@@ -28,10 +32,9 @@ func main() {
 		log.Fatal(RepoEnvVar + " required")
 	}
 
-	svc := releases.NewService(gh, repo, cacheTTL)
-
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/releases", api.ReleasesHandler(svc))
+	mux.HandleFunc("GET /api/releases", api.ReleasesHandler(releases.NewService(gh, repo, cacheTTL)))
+	mux.HandleFunc("GET "+assets.PathPrefix+"{id}", api.AssetHandler(assets.NewService(gh, assetTTL)))
 
 	// Serve Static Frontend
 	mux.Handle("/", http.FileServer(http.Dir("./frontend/dist")))

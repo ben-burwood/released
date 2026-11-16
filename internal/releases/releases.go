@@ -14,6 +14,7 @@ import (
 	"github.com/yuin/goldmark/v2/parser"
 	"github.com/yuin/goldmark/v2/renderer/html"
 
+	"releases/internal/assets"
 	"releases/internal/github"
 )
 
@@ -78,7 +79,6 @@ func (s *Service) fetch(ctx context.Context) (*Releases, error) {
 		return nil, err
 	}
 
-	assets := s.gh.NewAssetResolver(ctx)
 	releases := make([]Release, 0, len(items))
 	for _, item := range items {
 		r := Release{

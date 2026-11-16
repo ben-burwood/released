@@ -36,9 +36,10 @@ type Release struct {
 }
 
 type Client struct {
-	token   string
-	baseURL string
-	http    *http.Client
+	token     string
+	baseURL   string
+	assetsURL string
+	http      *http.Client
 }
 
 // NewClientFromEnv creates a Client authenticated with the GITHUB_TOKEN environment variable
@@ -47,7 +48,7 @@ func NewClientFromEnv() (*Client, error) {
 	if token == "" {
 		return nil, ErrTokenNotSet
 	}
-	return &Client{token: token, baseURL: apiBaseURL, http: &http.Client{Timeout: 30 * time.Second}}, nil
+	return &Client{token: token, baseURL: apiBaseURL, assetsURL: assetsURL, http: &http.Client{Timeout: 30 * time.Second}}, nil
 }
 
 func (c *Client) newRequest(ctx context.Context, url string) (*http.Request, error) {

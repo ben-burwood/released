@@ -2,58 +2,51 @@ package github
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 )
 
 // Release-note images on private repos point at github.com/user-attachments/assets/<id>, which 404 for anyone without a GitHub session.
-// Resolve them server-side (our token gets a 302 to a signed, publicly-fetchable S3 URL) and rewrite the body so browsers can load them.
-var assetRe = regexp.MustCompile(`https://github\.com/user-attachments/assets/[0-9a-fA-F-]+`)
+// Our token gets a redirect to a signed, publicly-fetchable S3 URL instead, valid for 5 minutes.
+const assetsURL = "https://github.com/user-attachments/assets/"
 
-// AssetResolver rewrites private GitHub attachment URLs to their signed, browser-fetchable equivalents.
-// Signed URLs expire, so use a fresh resolver per fetch rather than sharing one.
-type AssetResolver struct {
-	ctx    context.Context
-	client *Client
-	http   *http.Client
-	cache  map[string]string
+// AssetURLRe matches a private attachment URL, capturing its asset ID
+var AssetURLRe = regexp.MustCompile(`https://github\.com/user-attachments/assets/([0-9a-fA-F-]+)`)
+
+var assetIDRe = regexp.MustCompile(`^[0-9a-fA-F-]+$`)
+
+var ErrInvalidAssetID = errors.New("invalid asset id")
+
+// AssetURL returns the original (session-only on private repos) URL of an attachment
+func AssetURL(id string) string {
+	return assetsURL + id
 }
 
-// NewAssetResolver creates an AssetResolver that resolves attachments with the client's token, without following redirects
-func (c *Client) NewAssetResolver(ctx context.Context) *AssetResolver {
-	noRedirect := &http.Client{
-		Timeout:       c.http.Timeout,
-		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+// ResolveAsset returns the signed, browser-fetchable URL of an attachment
+func (c *Client) ResolveAsset(ctx context.Context, id string) (string, error) {
+	if !assetIDRe.MatchString(id) {
+		return "", ErrInvalidAssetID
 	}
-	return &AssetResolver{ctx: ctx, client: c, http: noRedirect, cache: map[string]string{}}
-}
-
-// Rewrite replaces every attachment URL in body with its signed URL, leaving any that fail to resolve unchanged
-func (a *AssetResolver) Rewrite(body string) string {
-	return assetRe.ReplaceAllStringFunc(body, func(original string) string {
-		if resolved, ok := a.cache[original]; ok {
-			return resolved
-		}
-		resolved := a.resolve(original)
-		a.cache[original] = resolved
-		return resolved
-	})
-}
-
-func (a *AssetResolver) resolve(url string) string {
-	req, err := a.client.newRequest(a.ctx, url)
+	req, err := c.newRequest(ctx, c.assetsURL+id)
 	if err != nil {
-		return url
+		return "", err
 	}
-	resp, err := a.http.Do(req)
+
+	noRedirect := *c.http
+	noRedirect.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	resp, err := noRedirect.Do(req)
 	if err != nil {
-		return url
+		return "", err
 	}
 	resp.Body.Close()
-	if location := resp.Header.Get("Location"); isRedirect(resp.StatusCode) && location != "" {
-		return location
+
+	location := resp.Header.Get("Location")
+	if !isRedirect(resp.StatusCode) || location == "" {
+		return "", fmt.Errorf("GitHub %d resolving asset %s", resp.StatusCode, id)
 	}
-	return url
+	return location, nil
 }
 
 func isRedirect(status int) bool {
