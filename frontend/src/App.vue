@@ -2,7 +2,6 @@
     <div class="min-h-screen w-full">
         <main class="mx-auto max-w-5xl px-4 py-10 sm:px-6">
             <h1 class="mb-8 text-3xl font-bold tracking-tight text-navy-950">
-                Releases :
                 <span v-if="repos.length > 1" class="relative inline-block max-w-full align-baseline">
                     <select
                         v-model="repo"
@@ -12,9 +11,7 @@
                     >
                         <option v-for="r in repos" :key="r" :value="r" class="text-base font-normal">{{ repoLabel(r) }}</option>
                     </select>
-                    <svg class="pointer-events-none absolute top-1/2 right-2 size-5 -translate-y-1/2 text-gray-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
-                    </svg>
+                    <IconChevronDown class="pointer-events-none absolute top-1/2 right-2 size-5 -translate-y-1/2 text-gray-500" aria-hidden="true" />
                 </span>
                 <template v-else>{{ repoName }}</template>
             </h1>
@@ -50,6 +47,7 @@ import ReleaseItem from "@/components/ReleaseItem.vue";
 import { SERVER_URL } from "@/main";
 import type { Release, Releases } from "@/types/release";
 import { computed, onMounted, onUnmounted, ref } from "vue";
+import IconChevronDown from "~icons/lucide/chevron-down";
 
 const PAGE_SIZE = 25;
 

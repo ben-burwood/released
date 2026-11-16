@@ -11,15 +11,15 @@ Go backend serving a Vue (Vite + Tailwind) frontend, deployed as a single Docker
     - `GITHUB_REPOS` — comma or space separated repos, e.g. `org/repo,org/other` (or just `org/repo`).
     - `GITHUB_REPOS_FILE` — path to a YAML config file listing repos under `repos:`.
 
-Repos can be given as `owner/name` or as a GitHub URL, e.g. `https://github.com/yuin/goldmark/releases`. The first repo is the default.
+Repos can be given as `owner/name` or as a GitHub URL, e.g. `https://github.com/ben-burwood/certui`. The first repo is the default.
 
 The server exits on startup if the token or repos are missing, or a repo is invalid.
 
 ```yaml
 # config.yml
 repos:
-  - streetwave/web-commercial
-  - https://github.com/yuin/goldmark/releases
+  - ben-burwood/released
+  - https://github.com/ben-burwood/certui
 ```
 
 With Docker, mount the file and point `GITHUB_REPOS_FILE` at it.
