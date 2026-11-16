@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/yuin/goldmark/v2/extension"
 	"github.com/yuin/goldmark/v2/parser"
 	"github.com/yuin/goldmark/v2/renderer/html"
@@ -142,5 +143,12 @@ func renderBody(body string) string {
 	if err := markdownRenderer.Render(&buf, source, markdownParser.Parse(source)); err != nil {
 		return ""
 	}
-	return buf.String()
+	return sanitizer.Sanitize(buf.String())
 }
+
+// sanitizer strips scripts, event handlers and unsafe URLs from the rendered notes, which allow raw HTML and are shown as-is by the UI
+var sanitizer = func() *bluemonday.Policy {
+	p := bluemonday.UGCPolicy()
+	p.AddTargetBlankToFullyQualifiedLinks(true) // also adds rel="noopener"
+	return p
+}()
