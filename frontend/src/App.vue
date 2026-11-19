@@ -39,6 +39,13 @@
                 </button>
             </template>
         </main>
+
+        <footer class="flex items-center justify-center py-6 text-sm text-gray-500">
+            <span>
+                Powered by
+                <a href="https://github.com/ben-burwood/released" target="_blank" rel="noopener" class="font-medium hover:text-navy-900 hover:underline">released</a>
+            </span>
+        </footer>
     </div>
 </template>
 
